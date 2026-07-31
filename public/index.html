@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/png" href="icon.png">
+<link rel="icon" type="image/svg+xml" href="icon.svg">
+<title>MyQuiz - 答题系统</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- ===== Login Page ===== -->
+<div id="login-page" class="login-wrapper">
+  <div class="login-card">
+    <div class="login-brand">
+      <div class="login-brand-icon"><img src="icon.svg" width="48" height="48" style="border-radius:12px;"></div>
+      <div class="login-brand-name">MyQuiz</div>
+      <div class="login-brand-desc">教师-学员答题系统</div>
+    </div>
+    <div class="login-tabs">
+      <button class="login-tab active" data-tab="login">登录</button>
+      <button class="login-tab" data-tab="register">教师注册</button>
+    </div>
+    <div id="login-form">
+      <div class="form-group">
+        <label class="form-label">用户名</label>
+        <input class="form-input" id="login-username" placeholder="输入用户名">
+      </div>
+      <div class="form-group">
+        <label class="form-label">密码</label>
+        <input class="form-input" id="login-password" type="password" placeholder="输入密码">
+      </div>
+      <button class="btn btn-primary btn-block btn-lg" onclick="QM.login()">登录</button>
+    </div>
+    <div id="register-form" style="display:none;">
+      <div class="form-group">
+        <label class="form-label">用户名</label>
+        <input class="form-input" id="reg-username" placeholder="设置用户名（至少3字符）">
+      </div>
+      <div class="form-group">
+        <label class="form-label">密码</label>
+        <input class="form-input" id="reg-password" type="password" placeholder="设置密码">
+      </div>
+      <div class="form-group">
+        <label class="form-label">显示名称（可选）</label>
+        <input class="form-input" id="reg-displayname" placeholder="如：张老师">
+      </div>
+      <button class="btn btn-primary btn-block btn-lg" onclick="QM.register()">注册教师账号</button>
+      <div class="form-hint mt-2 text-center">注册后可在系统中创建学员账号</div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Main App ===== -->
+<div id="app">
+  <nav id="sidebar">
+    <div class="brand">
+      <div class="brand-icon"><img src="icon.svg" width="32" height="32" style="border-radius:8px;"></div>
+      <div><div class="brand-name">MyQuiz</div><div class="brand-ver" id="user-role-label"></div></div>
+    </div>
+    <div class="nav" id="nav-items"></div>
+    <div class="sidebar-footer">
+      <div class="user-info" id="sidebar-user"></div>
+      <button class="btn btn-ghost btn-sm btn-block" onclick="QM.logout()" style="color:#c7d2fe;">退出登录</button>
+    </div>
+  </nav>
+  <div id="main">
+    <div class="topbar">
+      <button class="menu-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')">&#9776;</button>
+      <span class="topbar-title" id="topbar-title">首页</span>
+      <div class="topbar-right" id="topbar-right"></div>
+    </div>
+    <div class="content">
+      <div id="view-dashboard" class="view active"></div>
+      <div id="view-courses" class="view"></div>
+      <div id="view-import" class="view"></div>
+      <div id="view-students" class="view"></div>
+      <div id="view-practice" class="view"></div>
+      <div id="view-exam" class="view"></div>
+      <div id="view-wrongbook" class="view"></div>
+      <div id="view-records" class="view"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal & Toast -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title" id="modal-title"></span><button class="modal-close" onclick="QM.closeModal()">&times;</button></div>
+    <div class="modal-body" id="modal-body"></div>
+    <div class="modal-footer" id="modal-footer"></div>
+  </div>
+</div>
+<div id="toast-container"></div>
+
+<script src="app.js"></script>
+</body>
+</html>
