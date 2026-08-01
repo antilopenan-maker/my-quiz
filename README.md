@@ -11,6 +11,7 @@
 - **题库管理**：支持单题录入和批量导入
 - **学员管理**：创建学员账号、绑定课程权限
 - **成绩查看**：查看学员答题记录和统计
+- **API Key 管理**：生成/停用对接密钥，供外部 Agent 调用
 
 ### 学员端
 - 练习模式：顺序/随机刷题
@@ -25,7 +26,7 @@
 | 后端 | Node.js + Express |
 | 数据库 | SQLite (better-sqlite3) |
 | 前端 | 原生 HTML5 + CSS3 + JavaScript |
-| 认证 | JWT + bcryptjs |
+| 认证 | JWT + bcryptjs + API Key 双模式 |
 
 ## 数据结构
 
@@ -39,99 +40,141 @@
 - 判断题 (judge)
 - 填空题 (blank)
 
-## 大模型 API 集成
+---
 
-MyQuiz 支持通过大模型 API 自动生成和添加题目，提升题库建设效率。
+## AI Agent 对接（LLM API）
 
-### 支持的大模型服务
-- OpenAI API (GPT-3.5/GPT-4)
-- Anthropic Claude
-- 通义千问 (Qwen)
-- 文心一言 (ERNIE Bot)
-- 其他兼容 OpenAI API 格式的模型服务
+> **设计定位**：MyQuiz **本身不集成大模型**（不调用任何 LLM 服务），而是**对外暴露结构化 API**，让外部 AI Agent（如 DeepSeek、Claude、GPT 等对话式大模型，或自动化脚本）直接调用，实现题目的**快速批量录入**，免去教师手动逐题添加。
 
-### 配置大模型 API
+### 工作流程
 
-在 `.env` 文件中配置以下环境变量：
+```
+外部 AI Agent（大模型 / 脚本）
+    │  ① 生成题目 JSON
+    │  ② 携带 API Key 调用 MyQuiz API
+    ▼
+MyQuiz API（/api/llm/* 接口）
+    │  ③ 自动创建课程 / 分组 / 题库
+    │  ④ 批量写入题目
+    ▼
+MyQuiz 数据库 → 教师后台查看 → 学员刷题
+```
 
-| 变量 | 说明 | 示例 |
+### 快速开始（3 步）
+
+1. **生成 API Key**：教师登录后台 →「设置」页 →「API Key 管理」→ 点击「+ 生成新 Key」，得到以 `mq_` 开头的密钥。
+2. **让 AI Agent 调接口**：在任意大模型对话中描述题目需求，提供 API Key 与接口说明，让 AI 生成符合格式的 JSON 并调用 `/api/llm/import`。
+3. **确认入库**：刷新教师后台题库页面，查看 AI 生成的题目是否已写入，可按需编辑修正。
+
+### LLM 接口一览（需 API Key 认证）
+
+所有接口使用请求头 `Authorization: Bearer mq_xxxxx` 认证：
+
+| 方法 | 路径 | 功能 |
 |------|------|------|
-| `LLM_PROVIDER` | 大模型服务商 | `openai`, `anthropic`, `qwen`, `ernie` |
-| `LLM_API_KEY` | API 密钥 | `sk-xxx` |
-| `LLM_BASE_URL` | API 基础 URL（可选） | `https://api.openai.com/v1` |
-| `LLM_MODEL` | 模型名称 | `gpt-3.5-turbo`, `claude-2`, `qwen-max` |
-| `LLM_TEMPERATURE` | 温度参数（0.0-1.0） | `0.3` |
-| `LLM_MAX_TOKENS` | 最大生成 token 数 | `1024` |
+| GET | `/api/llm/status` | 查看课程 / 题库 / 学员概览 |
+| POST | `/api/llm/import` | 导入题目（自动创建课程 / 分组 / 题库，或追加到已有题库）|
+| GET | `/api/llm/banks/:bankId/questions` | 查看指定题库的题目列表 |
+| POST | `/api/llm/students` | 创建学员账号 |
+| PUT | `/api/llm/students/:studentId/courses` | 为学员绑定课程 |
 
-### 使用大模型 API 添加题目
-
-#### 方法一：通过 API 接口添加
-
-教师端可通过以下 API 接口使用大模型生成题目：
-
-```bash
-# 生成单题
-POST /api/banks/:id/questions/generate
-{
-  "topic": "JavaScript 基础",
-  "difficulty": "medium",
-  "type": "single",
-  "count": 5,
-  "instructions": "生成5道关于JavaScript基础语法的单选题，难度中等"
-}
-
-# 批量生成题目
-POST /api/banks/:id/import/generate
-{
-  "topic": "React Hooks",
-  "difficulty": "hard",
-  "type": "multi",
-  "count": 10,
-  "instructions": "生成10道关于React Hooks高级用法的多选题，难度高"
-}
-```
-
-#### 方法二：通过教师界面添加
-
-1. 登录教师后台
-2. 进入目标题库
-3. 点击「AI生成题目」按钮
-4. 输入题目主题、难度、类型和数量
-5. 点击「生成」按钮
-6. 审核生成的题目并确认添加
-
-#### 方法三：通过命令行工具添加
-
-```bash
-# 生成并添加题目到指定题库
-cd D:\Applications\Projects\MyQuiz
-node scripts/generate-questions.js \
-  --bank-id 123 \
-  --topic "Python 数据结构" \
-  --difficulty easy \
-  --type single \
-  --count 10 \
-  --instructions "生成10道关于Python列表、字典、元组的基础单选题"
-```
-
-### 大模型题目生成示例
+### 题目导入格式（POST /api/llm/import）
 
 ```json
 {
-  "question": "下列哪个选项不是 Python 的内置数据类型？",
-  "options": ["list", "dict", "array", "tuple"],
-  "answer": ["array"],
-  "explanation": "Python 的内置数据类型包括 list、dict、tuple、set 等，但 array 不是内置类型，需要 import array 或 numpy 才能使用。",
-  "difficulty": "easy"
+  "course": "PMP",
+  "group": "第一章 项目管理概论",
+  "bank": "练习题1",
+  "description": "可选的课程描述",
+  "questions": [
+    {
+      "type": "single",
+      "question": "下列哪个选项不是 Python 的内置数据类型？",
+      "options": [
+        { "key": "A", "text": "list" },
+        { "key": "B", "text": "dict" },
+        { "key": "C", "text": "array" },
+        { "key": "D", "text": "tuple" }
+      ],
+      "answerKeys": ["C"],
+      "analysis": "Python 内置数据类型包括 list、dict、tuple 等，array 需导入 array 或 numpy 模块。",
+      "topic": "Python 基础",
+      "score": 1
+    }
+  ]
 }
 ```
 
-### 安全与质量控制
+**字段说明：**
 
-- 所有大模型生成的题目都会经过本地规则验证
-- 支持人工审核模式，生成后需教师确认才能入库
-- 提供题目质量评分，帮助教师筛选高质量题目
-- 支持对生成题目进行编辑和修改
+| 字段 | 必填 | 说明 |
+|------|------|------|
+| `course` | ✅ | 课程名，不存在则自动创建 |
+| `group` | ❌ | 分组名，缺省为「默认分组」，不存在则自动创建 |
+| `bank` | ✅ | 题库名，不存在则自动创建 |
+| `questions` | ✅ | 题目数组，非空 |
+| `type` | 单题内 | `single` / `multi` / `judge` / `blank`，缺省 `single` |
+| `question` | 单题内 | 题干文本 |
+| `options` | 选择题 | 选项数组 `[{ key, text }]` |
+| `answerKeys` | 选择题 | 正确答案 key 数组，如 `["A"]` 或 `["A","C"]` |
+| `answerText` | 填空题 | 填空题答案文本数组 |
+| `analysis` | ❌ | 题目解析 |
+| `topic` | ❌ | 知识点标签 |
+
+**响应示例：**
+
+```json
+{
+  "ok": true,
+  "course": { "id": 1, "name": "PMP", "created": true },
+  "group": { "id": 3, "name": "第一章 项目管理概论", "created": true },
+  "bank": { "id": 7, "name": "练习题1", "created": true },
+  "imported": 5,
+  "total_questions": 5
+}
+```
+
+### 外部 Agent 调用示例
+
+**curl：**
+
+```bash
+curl -X POST http://localhost:3000/api/llm/import \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer mq_你的API_KEY" \
+  -d @questions.json
+```
+
+**大模型 Prompt 示例（给 AI Agent 的指令）：**
+
+```
+请为 MyQuiz 答题系统生成 5 道关于 JavaScript 基础语法的单选题。
+要求：
+1. 使用下面的 JSON 结构，通过 HTTP 调用 http://localhost:3000/api/llm/import
+2. 请求头携带 Authorization: Bearer mq_你的API_KEY
+3. course 填 "前端基础"，bank 填 "JS 练习题"
+4. 每题包含 question / options / answerKeys / analysis 四个字段
+```
+
+**命令行演示脚本：**
+
+仓库提供了演示脚本 `scripts/import-questions.js`，可读取 JSON 文件批量导入：
+
+```bash
+node scripts/import-questions.js \
+  --api-key mq_你的API_KEY \
+  --base-url http://localhost:3000 \
+  --file questions.json
+```
+
+### 安全说明
+
+- API Key 仅教师账号可生成，格式以 `mq_` 开头，存储在服务端数据库（明文 Key 仅生成时展示一次）。
+- 所有 `/api/llm/*` 接口均校验 API Key 有效性，删除后立即失效。
+- 每次调用会更新 Key 的 `last_used_at`，便于审计使用情况。
+- 建议为不同 Agent 创建不同标签的 Key（如「LLM导入专用」「自动化脚本」），便于追溯。
+
+---
 
 ## 快速开始
 
@@ -154,7 +197,7 @@ npm run dev
 ### 首次使用
 1. 访问首页，点击「教师注册」创建教师账号
 2. 登录后创建课程和分组
-3. 导入或手动添加题目
+3. 导入或手动添加题目（可用 AI Agent 对接快速录入）
 4. 创建学员账号并绑定课程
 5. 学员使用分配的账号登录开始练习
 
@@ -162,18 +205,20 @@ npm run dev
 
 ```
 my-quiz/
-├── server.js          # Express 主服务
-├── db.js              # 数据库层
-├── auth.js            # 认证模块
-├── package.json       # 项目配置
-├── .gitignore         # Git 忽略配置
-├── README.md          # 项目说明
-└── public/            # 前端静态资源
-    ├── index.html     # 单页应用入口
-    ├── app.js         # 前端逻辑
-    ├── styles.css     # 样式表
-    ├── icon.svg       # 图标
-    └── icon.png       # 图标
+├── server.js                 # Express 主服务
+├── db.js                     # 数据库层
+├── auth.js                   # 认证模块（JWT + API Key）
+├── scripts/
+│   └── import-questions.js   # AI 对接演示脚本（批量导入题目）
+├── package.json              # 项目配置
+├── .gitignore                # Git 忽略配置
+├── README.md                 # 项目说明
+└── public/                   # 前端静态资源
+    ├── index.html            # 单页应用入口
+    ├── app.js                # 前端逻辑
+    ├── styles.css            # 样式表
+    ├── icon.svg              # 图标
+    └── icon.png              # 图标
 ```
 
 ## API 概览
@@ -201,18 +246,38 @@ my-quiz/
 - `GET /api/banks/:id/questions` - 题目列表
 - `POST /api/banks/:id/import` - 批量导入题目
 - `POST /api/banks/:id/questions` - 添加单题
-- `POST /api/banks/:id/questions/generate` - AI 生成单题
-- `POST /api/banks/:id/import/generate` - AI 批量生成题目
+- `PUT /api/banks/:bankId/questions/:qid` - 编辑题目
+- `DELETE /api/banks/:bankId/questions/:qid` - 删除题目
 
 ### 学员管理
 - `GET /api/students` - 学员列表
 - `POST /api/students` - 创建学员
+- `PUT /api/students/:id` - 更新学员
+- `DELETE /api/students/:id` - 删除学员
 - `PUT /api/students/:id/courses` - 绑定课程
+- `GET /api/students/:id/records` - 学员答题记录
 
-### 答题相关
+### API Key 管理（教师）
+- `GET /api/apikeys` - 列出 API Key
+- `POST /api/apikeys` - 生成 API Key
+- `DELETE /api/apikeys/:keyId` - 删除 API Key
+
+### AI Agent 对接（API Key 认证）
+- `GET /api/llm/status` - 系统概览
+- `POST /api/llm/import` - 导入题目（自动建课程/分组/题库）
+- `GET /api/llm/banks/:bankId/questions` - 查看题库题目
+- `POST /api/llm/students` - 创建学员
+- `PUT /api/llm/students/:studentId/courses` - 绑定学员课程
+
+### 答题相关（学员）
 - `POST /api/records` - 提交答题记录
 - `GET /api/records` - 答题记录
 - `GET /api/wrongbook` - 错题本
+- `DELETE /api/wrongbook/:questionId` - 删除错题
+- `DELETE /api/wrongbook/clear-mastered` - 清空已掌握错题
+
+### 其他
+- `GET /api/health` - 健康检查
 
 ## 数据库
 
@@ -223,13 +288,9 @@ my-quiz/
 | 变量 | 说明 | 默认值 |
 |------|------|--------|
 | `PORT` | 服务端口 | `3000` |
-| `JWT_SECRET` | JWT 密钥 | `quizmaster-secret-2026-change-in-prod` |
-| `LLM_PROVIDER` | 大模型服务商 | `openai` |
-| `LLM_API_KEY` | API 密钥 | `none` |
-| `LLM_BASE_URL` | API 基础 URL | `https://api.openai.com/v1` |
-| `LLM_MODEL` | 模型名称 | `gpt-3.5-turbo` |
-| `LLM_TEMPERATURE` | 温度参数 | `0.3` |
-| `LLM_MAX_TOKENS` | 最大生成 token 数 | `1024` |
+| `JWT_SECRET` | JWT 密钥 | `myquiz-secret-2026-change-in-prod` |
+
+> MyQuiz 本身不调用任何大模型服务，因此**无需配置任何 LLM 相关环境变量**。大模型对接所需的 API Key 由教师在后台生成（见上文「AI Agent 对接」章节）。
 
 ## 开源协议
 
