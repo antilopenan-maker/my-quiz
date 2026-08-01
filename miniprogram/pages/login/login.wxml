@@ -1,0 +1,31 @@
+<!-- pages/login/login.wxml -->
+<view class="login-page">
+  <view class="login-logo">
+    <view class="logo-icon">Q</view>
+    <view class="logo-title">MyQuiz</view>
+    <view class="logo-sub">学员端答题系统</view>
+  </view>
+
+  <view class="login-card">
+    <view class="form-group">
+      <label class="form-label">用户名</label>
+      <input class="form-input" placeholder="请输入教师分配的账号" value="{{username}}" bindinput="onUsername" />
+    </view>
+    <view class="form-group">
+      <label class="form-label">密码</label>
+      <input class="form-input" placeholder="请输入密码" password value="{{password}}" bindinput="onPassword" bindconfirm="doLogin" />
+    </view>
+    <button class="btn btn-primary btn-block btn-lg" bindtap="doLogin" loading="{{loading}}">登 录</button>
+  </view>
+
+  <view class="server-config">
+    <view class="form-group">
+      <label class="form-label">服务器地址（教师提供）</label>
+      <view class="config-row">
+        <input class="form-input config-input" placeholder="http://localhost:3000" value="{{baseUrl}}" bindinput="onBaseUrl" />
+        <button class="btn btn-outline btn-sm" bindtap="saveBaseUrl">保存</button>
+      </view>
+    </view>
+    <view class="config-tip">提示：部署后请将地址改为服务器域名（需 HTTPS）</view>
+  </view>
+</view>

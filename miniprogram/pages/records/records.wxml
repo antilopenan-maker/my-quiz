@@ -1,0 +1,31 @@
+<!-- pages/records/records.wxml -->
+<view class="container">
+  <view wx:if="{{loading}}" class="empty">
+    <view class="empty-icon">⏳</view>
+    <view>加载中...</view>
+  </view>
+
+  <view wx:elif="{{records.length === 0}}" class="empty">
+    <view class="empty-icon">📋</view>
+    <view>暂无答题记录</view>
+    <view class="empty-sub">去刷几道题吧！</view>
+  </view>
+
+  <view wx:else class="record-list">
+    <view class="record-card" wx:for="{{records}}" wx:key="id">
+      <view class="record-main">
+        <view class="record-name">{{item.name || item.bank_name}}</view>
+        <view class="record-meta">
+          {{item.mode === 'exam' ? '考试' : '练习'}} · {{item.course_name || ''}} · {{item.bank_name || ''}}
+        </view>
+        <view class="record-meta">
+          {{item.date}} · {{item.total}} 题 · {{item.duration}} 秒
+        </view>
+      </view>
+      <view class="record-score {{item.score >= 60 ? 'pass' : 'fail'}}">
+        <view class="record-score-num">{{item.score}}</view>
+        <view class="record-score-label">分</view>
+      </view>
+    </view>
+  </view>
+</view>

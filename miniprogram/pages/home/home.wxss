@@ -1,0 +1,75 @@
+/* pages/home/home.wxss */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24rpx;
+}
+
+.header-name {
+  font-size: 36rpx;
+  font-weight: 700;
+}
+
+.header-sub {
+  font-size: 24rpx;
+  color: #9CA3AF;
+  margin-top: 6rpx;
+}
+
+.logout-btn {
+  font-size: 24rpx;
+  color: #6B7280;
+  border: 1rpx solid #D1D5DB;
+  border-radius: 999rpx;
+  padding: 8rpx 24rpx;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8rpx;
+}
+
+.course-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 28rpx 0;
+  border-bottom: 1rpx solid #F3F4F6;
+}
+
+.course-item:last-child {
+  border-bottom: none;
+}
+
+.course-name {
+  font-size: 32rpx;
+  font-weight: 600;
+}
+
+.course-sub {
+  font-size: 24rpx;
+  color: #9CA3AF;
+  margin-top: 8rpx;
+}
+
+.course-arrow {
+  font-size: 44rpx;
+  color: #D1D5DB;
+}
+
+.empty-sub {
+  font-size: 24rpx;
+  color: #9CA3AF;
+  margin-top: 12rpx;
+}
+
+.score {
+  font-size: 32rpx;
+  font-weight: 700;
+}
+
+.score-pass { color: #059669; }
+.score-fail { color: #DC2626; }

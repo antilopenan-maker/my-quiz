@@ -1,0 +1,37 @@
+<!-- pages/wrongbook/wrongbook.wxml -->
+<view class="container">
+  <!-- 筛选 -->
+  <view class="filter-bar">
+    <view class="filter-chip {{filter === 'all' ? 'active' : ''}}" bindtap="setFilter" data-filter="all">全部</view>
+    <view class="filter-chip {{filter === '未掌握' ? 'active' : ''}}" bindtap="setFilter" data-filter="未掌握">未掌握</view>
+    <view class="filter-chip {{filter === '复习中' ? 'active' : ''}}" bindtap="setFilter" data-filter="复习中">复习中</view>
+    <view class="filter-chip {{filter === '已掌握' ? 'active' : ''}}" bindtap="setFilter" data-filter="已掌握">已掌握</view>
+  </view>
+
+  <view wx:if="{{loading}}" class="empty">
+    <view class="empty-icon">⏳</view>
+    <view>加载中...</view>
+  </view>
+
+  <view wx:elif="{{filteredEntries.length === 0}}" class="empty">
+    <view class="empty-icon">🌟</view>
+    <view>没有错题，太棒了！</view>
+  </view>
+
+  <view wx:else>
+    <view class="wrong-card" wx:for="{{filteredEntries}}" wx:key="question_id">
+      <view class="wrong-header">
+        <text class="badge {{item.type === 'single' ? 'badge-primary' : (item.type === 'multi' ? 'badge-green' : 'badge-gray')}}">
+          {{item.type === 'single' ? '单选' : (item.type === 'multi' ? '多选' : (item.type === 'judge' ? '判断' : '填空'))}}
+        </text>
+        <text class="badge {{item.status === '已掌握' ? 'badge-green' : (item.status === '复习中' ? 'badge-primary' : 'badge-red')}}">{{item.status}}</text>
+        <text class="wrong-count">错 {{item.wrong_count}} 次</text>
+      </view>
+      <view class="wrong-question">{{item.question}}</view>
+      <view class="wrong-actions">
+        <button class="btn btn-primary btn-sm" bindtap="reviewQuestion" data-qid="{{item.question_id}}">复习</button>
+        <button class="btn btn-ghost" bindtap="removeEntry" data-qid="{{item.question_id}}">移除</button>
+      </view>
+    </view>
+  </view>
+</view>

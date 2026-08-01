@@ -1,0 +1,73 @@
+<!-- pages/practice/practice.wxml -->
+<view class="container">
+  <view class="card">
+    <view class="card-title">{{bankName}}</view>
+    <view class="bank-meta">{{bankQcount}} 道题目</view>
+  </view>
+
+  <!-- 模式切换 -->
+  <view class="card">
+    <view class="card-title">模式选择</view>
+    <view class="mode-tabs">
+      <view class="mode-tab {{mode === 'practice' ? 'active' : ''}}" bindtap="setMode" data-mode="practice">
+        <view class="mode-icon">✏️</view>
+        <view class="mode-name">练习模式</view>
+        <view class="mode-desc">即时反馈，边做边学</view>
+      </view>
+      <view class="mode-tab {{mode === 'exam' ? 'active' : ''}}" bindtap="setMode" data-mode="exam">
+        <view class="mode-icon">📝</view>
+        <view class="mode-name">考试模式</view>
+        <view class="mode-desc">计时答题，自动评分</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 练习设置 -->
+  <block wx:if="{{mode === 'practice'}}">
+    <view class="card">
+      <view class="card-title">出题顺序</view>
+      <view class="chip-group">
+        <view class="chip {{order === 'sequential' ? 'active' : ''}}" bindtap="setOrder" data-order="sequential">顺序</view>
+        <view class="chip {{order === 'random' ? 'active' : ''}}" bindtap="setOrder" data-order="random">随机</view>
+      </view>
+    </view>
+
+    <view class="card">
+      <view class="card-title">题目数量</view>
+      <view class="chip-group">
+        <view class="chip {{count === '20' ? 'active' : ''}}" bindtap="setCount" data-count="20">20题</view>
+        <view class="chip {{count === '50' ? 'active' : ''}}" bindtap="setCount" data-count="50">50题</view>
+        <view class="chip {{count === 'all' ? 'active' : ''}}" bindtap="setCount" data-count="all">全部</view>
+      </view>
+    </view>
+  </block>
+
+  <!-- 考试设置 -->
+  <block wx:if="{{mode === 'exam'}}">
+    <view class="card">
+      <view class="card-title">考试设置</view>
+      <view class="form-group">
+        <label class="form-label">考试名称</label>
+        <input class="form-input" placeholder="模拟考试" value="{{examName}}" bindinput="onExamName" />
+      </view>
+      <view class="form-row">
+        <view class="form-group form-half">
+          <label class="form-label">题目数量</label>
+          <input class="form-input" type="number" value="{{examCount}}" bindinput="onExamCount" />
+        </view>
+        <view class="form-group form-half">
+          <label class="form-label">时长（分钟）</label>
+          <input class="form-input" type="number" value="{{examTime}}" bindinput="onExamTime" />
+        </view>
+      </view>
+      <view class="form-group">
+        <label class="form-label">及格线（分）</label>
+        <input class="form-input" type="number" value="{{examPass}}" bindinput="onExamPass" />
+      </view>
+    </view>
+  </block>
+
+  <button class="btn btn-primary btn-block btn-lg" bindtap="start">
+    {{mode === 'practice' ? '✏️ 开始练习' : '📝 开始考试'}}
+  </button>
+</view>

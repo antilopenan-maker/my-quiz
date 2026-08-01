@@ -1,0 +1,9 @@
+{
+  "desc": "MyQuiz 学员端小程序配置",
+  "rules": [
+    {
+      "action": "allow",
+      "page": "*"
+    }
+  ]
+}

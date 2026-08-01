@@ -1,0 +1,39 @@
+{
+  "pages": [
+    "pages/login/login",
+    "pages/home/home",
+    "pages/course/course",
+    "pages/practice/practice",
+    "pages/quiz/quiz",
+    "pages/wrongbook/wrongbook",
+    "pages/records/records"
+  ],
+  "window": {
+    "navigationBarBackgroundColor": "#3B82F6",
+    "navigationBarTitleText": "MyQuiz",
+    "navigationBarTextStyle": "white",
+    "backgroundColor": "#F3F4F6"
+  },
+  "tabBar": {
+    "color": "#9CA3AF",
+    "selectedColor": "#3B82F6",
+    "backgroundColor": "#FFFFFF",
+    "borderStyle": "black",
+    "list": [
+      {
+        "pagePath": "pages/home/home",
+        "text": "首页"
+      },
+      {
+        "pagePath": "pages/wrongbook/wrongbook",
+        "text": "错题本"
+      },
+      {
+        "pagePath": "pages/records/records",
+        "text": "记录"
+      }
+    ]
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json"
+}

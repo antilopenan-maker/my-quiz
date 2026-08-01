@@ -200,6 +200,26 @@ const Bank = {
     JOIN courses c ON g.course_id = c.id
     WHERE b.teacher_id = ? ORDER BY c.id DESC, g.sort_order, b.id DESC
   `),
+  // 学员已绑定的课程列表（含各课程题目数统计）
+  findByStudentCourses: db.prepare(`
+    SELECT c.id, c.name, c.description,
+      (SELECT COUNT(*) FROM banks b2 JOIN groups g2 ON b2.group_id = g2.id WHERE g2.course_id = c.id) as bank_count,
+      (SELECT COUNT(*) FROM questions q JOIN banks b3 ON q.bank_id = b3.id JOIN groups g3 ON b3.group_id = g3.id WHERE g3.course_id = c.id) as qcount,
+      (SELECT COUNT(*) FROM groups g4 WHERE g4.course_id = c.id) as group_count
+    FROM courses c
+    JOIN student_courses sc ON sc.course_id = c.id
+    WHERE sc.student_id = ? ORDER BY c.id DESC
+  `),
+  // 某课程下学员可访问的分组-题库树
+  findByCourseForStudent: db.prepare(`
+    SELECT b.*, g.name as group_name, g.sort_order,
+      (SELECT COUNT(*) FROM questions WHERE bank_id = b.id) as qcount
+    FROM banks b
+    JOIN groups g ON b.group_id = g.id
+    JOIN courses c ON g.course_id = c.id
+    JOIN student_courses sc ON sc.course_id = c.id
+    WHERE sc.student_id = ? AND c.id = ? ORDER BY g.sort_order, g.id, b.id DESC
+  `),
   findByTeacherStudent: db.prepare(`
     SELECT b.*, g.name as group_name, g.course_id, c.name as course_name,
       (SELECT COUNT(*) FROM questions WHERE bank_id = b.id) as qcount

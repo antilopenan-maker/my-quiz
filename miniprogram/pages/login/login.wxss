@@ -1,0 +1,67 @@
+/* pages/login/login.wxss */
+.login-page {
+  min-height: 100vh;
+  background: linear-gradient(180deg, #3B82F6 0%, #2563EB 40%, #F3F4F6 40%);
+  padding: 100rpx 48rpx 48rpx;
+  box-sizing: border-box;
+}
+
+.login-logo {
+  text-align: center;
+  margin-bottom: 60rpx;
+}
+
+.logo-icon {
+  width: 120rpx;
+  height: 120rpx;
+  line-height: 120rpx;
+  border-radius: 30rpx;
+  background: #FFFFFF;
+  color: #3B82F6;
+  font-size: 72rpx;
+  font-weight: 700;
+  margin: 0 auto 20rpx;
+  box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.15);
+}
+
+.logo-title {
+  color: #FFFFFF;
+  font-size: 44rpx;
+  font-weight: 700;
+  letter-spacing: 2rpx;
+}
+
+.logo-sub {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 24rpx;
+  margin-top: 8rpx;
+}
+
+.login-card {
+  background: #FFFFFF;
+  border-radius: 24rpx;
+  padding: 48rpx 40rpx;
+  box-shadow: 0 8rpx 32rpx rgba(0, 0, 0, 0.08);
+}
+
+.server-config {
+  margin-top: 40rpx;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 16rpx;
+  padding: 24rpx;
+}
+
+.config-row {
+  display: flex;
+  gap: 16rpx;
+}
+
+.config-input {
+  flex: 1;
+}
+
+.config-tip {
+  font-size: 22rpx;
+  color: #9CA3AF;
+  margin-top: 12rpx;
+}

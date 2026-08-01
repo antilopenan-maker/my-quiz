@@ -1,0 +1,107 @@
+<!-- pages/quiz/quiz.wxml -->
+<view class="quiz-page">
+
+  <!-- 结果页 -->
+  <view wx:if="{{finished}}" class="result-page">
+    <view class="result-card">
+      <view class="result-icon">{{result.score >= 60 ? '🎉' : '💪'}}</view>
+      <view class="result-score">{{result.score}}</view>
+      <view class="result-label">分</view>
+      <view class="result-pass {{result.score >= 60 ? 'pass' : 'fail'}}">
+        {{result.score >= 60 ? '合格' : '未达标'}}
+      </view>
+      <view class="result-stats">
+        <view class="result-stat">
+          <view class="result-stat-num green">{{result.correct}}</view>
+          <view class="result-stat-label">答对</view>
+        </view>
+        <view class="result-stat">
+          <view class="result-stat-num red">{{result.wrongCount}}</view>
+          <view class="result-stat-label">答错</view>
+        </view>
+        <view class="result-stat">
+          <view class="result-stat-num gray">{{result.total}}</view>
+          <view class="result-stat-label">总题数</view>
+        </view>
+      </view>
+      <button class="btn btn-primary btn-block" bindtap="backHome">返回</button>
+    </view>
+  </view>
+
+  <!-- 答题页 -->
+  <block wx:else>
+    <!-- 顶部栏 -->
+    <view class="quiz-header">
+      <view class="quiz-progress">第 {{index + 1}} / {{total}} 题</view>
+      <view wx:if="{{mode === 'exam'}}" class="quiz-timer {{timerText === '00:00' ? 'warning' : ''}}">{{timerText}}</view>
+      <view class="quiz-close" bindtap="finishPractice">{{mode === 'practice' ? '结束' : '交卷'}}</view>
+    </view>
+
+    <!-- 题目卡片 -->
+    <view class="question-card">
+      <view class="question-meta">
+        <text class="badge badge-primary">{{typeLabels[q.type]}}</text>
+        <text class="question-num">第 {{q.number || index + 1}} 题</text>
+      </view>
+      <view class="question-text">{{q.question}}</view>
+
+      <!-- 选择题 -->
+      <view wx:if="{{q.type !== 'blank'}}" class="options-list">
+        <view wx:for="{{q.options}}" wx:key="key"
+              class="option-item {{item.key}}"
+              data-key="{{item.key}}"
+              bindtap="selectOption">
+          <view class="option-key">{{item.key}}</view>
+          <view class="option-text">{{item.text}}</view>
+          <view wx:if="{{(isSubmitted || isRev) && (ans && ans.keys.indexOf(item.key) >= 0)}}"
+                class="option-mark {{ans.correct ? 'ok' : 'bad'}}">{{ans.correct ? '✓' : '✗'}}</view>
+          <view wx:elif="{{(isSubmitted || isRev) && q.answer_keys.indexOf(item.key) >= 0}}" class="option-mark ok">✓</view>
+        </view>
+      </view>
+
+      <!-- 填空题 -->
+      <view wx:else>
+        <input class="blank-input" placeholder="请输入答案" value="{{ans.text}}"
+               disabled="{{isSubmitted || isRev}}"
+               bindinput="fillBlank" />
+      </view>
+
+      <!-- 反馈 -->
+      <view wx:if="{{isSubmitted || isRev}}" class="feedback {{ans && ans.correct ? 'ok' : 'bad'}}">
+        <view class="feedback-title">
+          {{ans && ans.correct ? '✅ 回答正确' : (isRev ? '✨ 已显示答案' : '❌ 回答错误')}}
+        </view>
+        <view class="feedback-answer">
+          正确答案：{{q.answer_keys.join('、') || q.answer_text.join('、')}}
+        </view>
+        <view wx:if="{{q.analysis}}" class="feedback-analysis" bindtap="showAnalysis">📖 查看解析</view>
+      </view>
+
+      <!-- 练习模式操作按钮 -->
+      <view wx:if="{{mode === 'practice'}}" class="action-row">
+        <button wx:if="{{!isSubmitted && !isRev && !ans}}" class="btn btn-outline btn-sm" bindtap="revealAnswer">显示答案</button>
+        <button wx:if="{{!isSubmitted && !isRev && ans}}" class="btn btn-primary btn-sm" bindtap="submitAnswer">提交答案</button>
+      </view>
+    </view>
+
+    <!-- 导航 -->
+    <view class="quiz-nav">
+      <button class="btn btn-outline" bindtap="prev" disabled="{{index === 0}}">上一题</button>
+      <button class="btn btn-primary" bindtap="next" disabled="{{index === total - 1}}">下一题</button>
+    </view>
+
+    <!-- 答题卡 -->
+    <view class="answer-card">
+      <view class="answer-card-title">
+        答题卡
+        <text class="answer-stats">已答 {{answeredCount}} · 对 {{correctCount}} · 错 {{wrongCount}}</text>
+      </view>
+      <view class="answer-grid">
+        <view wx:for="{{session.questionsCount}}" wx:key="*this"
+              class="answer-btn {{item === index ? 'current' : ''}}"
+              data-i="{{item}}"
+              bindtap="goTo">{{item + 1}}</view>
+      </view>
+    </view>
+  </block>
+</view>

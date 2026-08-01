@@ -1,0 +1,40 @@
+<!-- pages/course/course.wxml -->
+<view class="container">
+  <view wx:if="{{loading}}" class="empty">
+    <view class="empty-icon">⏳</view>
+    <view>加载中...</view>
+  </view>
+
+  <block wx:else>
+    <!-- 分组 -->
+    <view class="group-block" wx:for="{{groups}}" wx:key="id" wx:for-item="group">
+      <view class="group-title">
+        <text>{{group.name}}</text>
+        <text class="group-count">{{group.banks.length}} 个题库</text>
+      </view>
+
+      <!-- 题库列表 -->
+      <view class="bank-item" wx:for="{{group.banks}}" wx:key="id" wx:for-item="bank"
+            bindtap="goPractice"
+            data-id="{{bank.id}}" data-name="{{bank.name}}" data-qcount="{{bank.qcount}}">
+        <view class="bank-info">
+          <view class="bank-name">{{bank.name}}</view>
+          <view class="bank-sub">{{bank.qcount}} 道题目</view>
+        </view>
+        <view class="bank-action">
+          <text class="badge {{bank.qcount > 0 ? 'badge-primary' : 'badge-gray'}}">
+            {{bank.qcount > 0 ? '开始练习' : '暂无题目'}}
+          </text>
+          <text class="bank-arrow">›</text>
+        </view>
+      </view>
+
+      <view wx:if="{{group.banks.length === 0}}" class="empty-mini">该分组暂无题库</view>
+    </view>
+
+    <view wx:if="{{groups.length === 0}}" class="empty">
+      <view class="empty-icon">📭</view>
+      <view>该课程暂无题库</view>
+    </view>
+  </block>
+</view>

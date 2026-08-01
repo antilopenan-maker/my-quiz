@@ -1,0 +1,47 @@
+/* pages/records/records.wxss */
+.record-card {
+  background: #FFFFFF;
+  border-radius: 16rpx;
+  padding: 24rpx;
+  margin-bottom: 16rpx;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.04);
+}
+
+.record-name {
+  font-size: 30rpx;
+  font-weight: 600;
+  margin-bottom: 8rpx;
+}
+
+.record-meta {
+  font-size: 22rpx;
+  color: #9CA3AF;
+  margin-top: 4rpx;
+}
+
+.record-score {
+  text-align: center;
+  margin-left: 20rpx;
+}
+
+.record-score-num {
+  font-size: 44rpx;
+  font-weight: 700;
+}
+
+.record-score.pass .record-score-num { color: #059669; }
+.record-score.fail .record-score-num { color: #DC2626; }
+
+.record-score-label {
+  font-size: 22rpx;
+  color: #9CA3AF;
+}
+
+.empty-sub {
+  font-size: 24rpx;
+  color: #9CA3AF;
+  margin-top: 12rpx;
+}

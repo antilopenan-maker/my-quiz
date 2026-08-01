@@ -1,0 +1,62 @@
+/* pages/course/course.wxss */
+.group-block {
+  margin-bottom: 24rpx;
+}
+
+.group-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #6B7280;
+  padding: 0 8rpx 12rpx;
+}
+
+.group-count {
+  font-size: 22rpx;
+  color: #9CA3AF;
+  font-weight: 400;
+}
+
+.bank-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #FFFFFF;
+  border-radius: 16rpx;
+  padding: 28rpx 24rpx;
+  margin-bottom: 16rpx;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.04);
+}
+
+.bank-name {
+  font-size: 32rpx;
+  font-weight: 600;
+}
+
+.bank-sub {
+  font-size: 24rpx;
+  color: #9CA3AF;
+  margin-top: 8rpx;
+}
+
+.bank-action {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+}
+
+.bank-arrow {
+  font-size: 40rpx;
+  color: #D1D5DB;
+}
+
+.empty-mini {
+  text-align: center;
+  color: #9CA3AF;
+  font-size: 24rpx;
+  padding: 20rpx;
+  background: #F9FAFB;
+  border-radius: 12rpx;
+}

@@ -1,0 +1,69 @@
+/* pages/wrongbook/wrongbook.wxss */
+.filter-bar {
+  display: flex;
+  gap: 12rpx;
+  margin-bottom: 24rpx;
+  flex-wrap: wrap;
+}
+
+.filter-chip {
+  padding: 10rpx 26rpx;
+  border-radius: 999rpx;
+  background: #FFFFFF;
+  color: #6B7280;
+  font-size: 24rpx;
+  border: 2rpx solid transparent;
+}
+
+.filter-chip.active {
+  background: #EBF4FF;
+  color: #3B82F6;
+  border-color: #3B82F6;
+  font-weight: 600;
+}
+
+.wrong-card {
+  background: #FFFFFF;
+  border-radius: 16rpx;
+  padding: 24rpx;
+  margin-bottom: 20rpx;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.04);
+}
+
+.wrong-header {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  margin-bottom: 12rpx;
+}
+
+.wrong-count {
+  margin-left: auto;
+  font-size: 22rpx;
+  color: #9CA3AF;
+}
+
+.wrong-question {
+  font-size: 28rpx;
+  line-height: 1.6;
+  margin-bottom: 16rpx;
+}
+
+.wrong-actions {
+  display: flex;
+  gap: 16rpx;
+  justify-content: flex-end;
+}
+
+.btn-ghost {
+  background: transparent;
+  color: #9CA3AF;
+  font-size: 24rpx;
+  border: 1rpx solid #E5E7EB;
+  border-radius: 12rpx;
+  padding: 8rpx 24rpx;
+}
+
+.btn-ghost::after {
+  border: none;
+}

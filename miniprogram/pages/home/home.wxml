@@ -1,0 +1,70 @@
+<!-- pages/home/home.wxml -->
+<view class="container">
+  <!-- 顶部用户栏 -->
+  <view class="header">
+    <view class="header-left">
+      <view class="header-name">{{userInfo.displayName || userInfo.username || '学员'}}</view>
+      <view class="header-sub">欢迎回来，今天也要加油刷题哦</view>
+    </view>
+    <view class="header-right">
+      <view class="logout-btn" bindtap="logout">退出</view>
+    </view>
+  </view>
+
+  <!-- 统计概览 -->
+  <view class="card">
+    <view class="stats-bar">
+      <view class="stats-item">
+        <view class="stats-num">{{stats.course_count}}</view>
+        <view class="stats-label">绑定课程</view>
+      </view>
+      <view class="stats-item">
+        <view class="stats-num">{{stats.total_questions}}</view>
+        <view class="stats-label">题目总数</view>
+      </view>
+      <view class="stats-item">
+        <view class="stats-num">{{stats.wrong_count}}</view>
+        <view class="stats-label">错题数</view>
+      </view>
+      <view class="stats-item">
+        <view class="stats-num">{{stats.record_count}}</view>
+        <view class="stats-label">练习次数</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 我的课程 -->
+  <view class="card">
+    <view class="card-header">
+      <view class="card-title">我的课程</view>
+    </view>
+
+    <view wx:if="{{courses.length === 0}}" class="empty">
+      <view class="empty-icon">📚</view>
+      <view>暂无绑定课程</view>
+      <view class="empty-sub">请联系教师绑定课程后开始刷题</view>
+    </view>
+
+    <view wx:else>
+      <view class="course-item" wx:for="{{courses}}" wx:key="id" bindtap="goCourse" data-id="{{item.id}}">
+        <view class="course-info">
+          <view class="course-name">{{item.name}}</view>
+          <view class="course-sub">{{item.bank_count}} 个题库 · {{item.qcount}} 道题目</view>
+        </view>
+        <view class="course-arrow">›</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 最近记录 -->
+  <view class="card" wx:if="{{recentRecords.length > 0}}">
+    <view class="card-title">最近练习</view>
+    <view class="list-item" wx:for="{{recentRecords}}" wx:key="id">
+      <view>
+        <view class="list-item-title">{{item.name || item.bank_name}}</view>
+        <view class="list-item-sub">{{item.date}} · {{item.course_name || ''}}</view>
+      </view>
+      <view class="score {{item.score >= 60 ? 'score-pass' : 'score-fail'}}">{{item.score}}分</view>
+    </view>
+  </view>
+</view>

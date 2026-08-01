@@ -296,6 +296,49 @@ app.get('/api/students/records', requireAuth, requireTeacher, (req, res) => {
   res.json({ records });
 });
 
+// ===== 学员端 API（微信小程序专用） =====
+
+// 学员：我的绑定课程列表（首页）
+app.get('/api/student/courses', requireAuth, requireStudent, (req, res) => {
+  const courses = Bank.findByStudentCourses.all(req.user.id);
+  res.json({ courses });
+});
+
+// 学员：某课程下的分组-题库树
+app.get('/api/student/course/:cid/banks', requireAuth, requireStudent, (req, res) => {
+  const bound = StudentCourse.isBound.get(req.user.id, req.params.cid);
+  if (!bound || bound.count === 0) return res.status(403).json({ error: '未绑定该课程' });
+  const banks = Bank.findByCourseForStudent.all(req.user.id, req.params.cid);
+  // 按分组聚合
+  const groupsMap = new Map();
+  banks.forEach(b => {
+    if (!groupsMap.has(b.group_id)) {
+      groupsMap.set(b.group_id, { id: b.group_id, name: b.group_name, banks: [] });
+    }
+    groupsMap.get(b.group_id).banks.push({ id: b.id, name: b.name, qcount: b.qcount });
+  });
+  res.json({ groups: [...groupsMap.values()] });
+});
+
+// 学员：首页概览（课程数 / 题目总数 / 记录数 / 错题数 / 最近记录）
+app.get('/api/student/dashboard', requireAuth, requireStudent, (req, res) => {
+  const courses = Bank.findByStudentCourses.all(req.user.id);
+  const records = Record.findByUser.all(req.user.id, 5).map(r => ({ ...r, details: r.details ? JSON.parse(r.details) : [] }));
+  const wrongEntries = WrongEntry.findByUser.all(req.user.id);
+  const totalQuestions = courses.reduce((s, c) => s + (c.qcount || 0), 0);
+  const wrongCount = wrongEntries.length;
+  const masteredCount = wrongEntries.filter(e => e.status === '已掌握').length;
+  res.json({
+    course_count: courses.length,
+    total_questions: totalQuestions,
+    record_count: records.length,
+    wrong_count: wrongCount,
+    mastered_count: masteredCount,
+    recent_records: records,
+    courses: courses.map(c => ({ id: c.id, name: c.name, qcount: c.qcount, bank_count: c.bank_count })),
+  });
+});
+
 // ===== 学员答题 =====
 
 app.post('/api/records', requireAuth, requireStudent, (req, res) => {
