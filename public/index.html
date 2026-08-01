@@ -54,6 +54,7 @@
 
 <!-- ===== Main App ===== -->
 <div id="app">
+  <div id="sidebar-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:99;" onclick="document.getElementById('sidebar').classList.remove('open');this.style.display='none'"></div>
   <nav id="sidebar">
     <div class="brand">
       <div class="brand-icon"><img src="icon.svg" width="32" height="32" style="border-radius:8px;"></div>
@@ -67,7 +68,7 @@
   </nav>
   <div id="main">
     <div class="topbar">
-      <button class="menu-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')">&#9776;</button>
+      <button class="menu-toggle" onclick="var sb=document.getElementById('sidebar');var ov=document.getElementById('sidebar-overlay');if(sb.classList.contains('open')){sb.classList.remove('open');ov.style.display='none'}else{sb.classList.add('open');ov.style.display='block'}">&#9776;</button>
       <span class="topbar-title" id="topbar-title">首页</span>
       <div class="topbar-right" id="topbar-right"></div>
     </div>
@@ -80,6 +81,7 @@
       <div id="view-exam" class="view"></div>
       <div id="view-wrongbook" class="view"></div>
       <div id="view-records" class="view"></div>
+      <div id="view-settings" class="view"></div>
     </div>
   </div>
 </div>

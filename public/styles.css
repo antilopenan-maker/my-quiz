@@ -285,15 +285,168 @@ body.focus-mode .topbar { display: none; }
 .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .config-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
 .config-section-title { font-size: 13px; font-weight: 600; margin-bottom: 10px; color: var(--text-sec); }
+.menu-toggle { display: none; font-size: 20px; background: none; border: none; cursor: pointer; }
 
-@media (max-width: 768px) {
-  #sidebar { transform: translateX(-100%); width: 260px; }
-  #sidebar.open { transform: translateX(0); }
+/* ===== Mobile Responsive ===== */
+
+/* Tablet */
+@media (max-width: 900px) {
+  #sidebar { transform: translateX(-100%); width: 240px; }
+  #sidebar.open { transform: translateX(0); box-shadow: 4px 0 30px rgba(0,0,0,.2); }
   #main { margin-left: 0; }
-  .topbar { padding: 0 16px; }
+  .menu-toggle { display: inline-flex; align-items: center; }
   .content { padding: 16px; }
-  .stats-grid { grid-template-columns: repeat(2, 1fr); }
-  .form-row { flex-direction: column; }
-  .menu-toggle { display: block !important; }
+  .quiz-container { max-width: 100%; }
 }
-.menu-toggle { display: none; font-size: 20px; }
+
+/* Mobile */
+@media (max-width: 600px) {
+  html { font-size: 15px; }
+  body { -webkit-tap-highlight-color: transparent; }
+
+  /* Login */
+  .login-card { padding: 28px 20px; border-radius: 14px; }
+  .login-brand-name { font-size: 20px; }
+
+  /* Topbar */
+  .topbar { height: 50px; padding: 0 12px; gap: 8px; }
+  .topbar-title { font-size: 15px; }
+  .topbar-right .bank-select { max-width: 160px; font-size: 12px; padding: 5px 8px; }
+
+  /* Content */
+  .content { padding: 12px; }
+
+  /* Sidebar overlay */
+  #sidebar { width: 100%; max-width: 280px; }
+  #sidebar.open::after {
+    content: ''; position: fixed; inset: 0; background: rgba(0,0,0,.3);
+    z-index: -1;
+  }
+
+  /* Stats grid */
+  .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .stat-card { padding: 12px; }
+  .stat-value { font-size: 24px; }
+  .stat-label { font-size: 11px; }
+
+  /* Cards */
+  .card { padding: 14px; border-radius: 10px; margin-bottom: 12px; }
+  .card-title { font-size: 14px; }
+  .card-header { margin-bottom: 12px; flex-wrap: wrap; gap: 8px; }
+
+  /* Quick actions */
+  .quick-actions { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .quick-action { padding: 12px; gap: 10px; }
+  .quick-action-icon { width: 36px; height: 36px; font-size: 18px; }
+  .quick-action-label { font-size: 13px; }
+  .quick-action-desc { font-size: 10px; }
+
+  /* Quiz */
+  .quiz-container { max-width: 100%; }
+  .quiz-header { flex-wrap: wrap; gap: 8px; }
+  .quiz-progress { font-size: 12px; }
+  .quiz-timer { font-size: 12px; padding: 4px 10px; }
+
+  /* Question card */
+  .question-card { padding: 16px; border-radius: 10px; margin-bottom: 12px; }
+  .question-text { font-size: 15px; line-height: 1.65; margin-bottom: 16px; }
+  .question-number { margin-bottom: 10px; }
+  .question-number span:first-child { font-size: 11px; }
+
+  /* Options - larger touch targets */
+  .options-list { gap: 8px; }
+  .option-item { padding: 14px 14px; min-height: 48px; }
+  .option-key { width: 28px; height: 28px; font-size: 13px; }
+  .option-text { font-size: 14px; line-height: 1.5; }
+
+  /* Blank input */
+  .question-card .form-input { font-size: 16px; padding: 12px; }
+
+  /* Feedback */
+  .feedback { margin-top: 12px; padding: 12px 14px; font-size: 13px; line-height: 1.5; border-radius: 8px; }
+
+  /* Quiz controls - stack on mobile */
+  .quiz-controls { flex-direction: column; gap: 10px; }
+  .quiz-controls > div { width: 100%; }
+  .quiz-nav-btns { display: flex; gap: 8px; }
+  .quiz-nav-btns .btn { flex: 1; padding: 10px; }
+  .quiz-controls .btn { padding: 10px 16px; font-size: 14px; }
+  .quiz-controls .flex { justify-content: flex-end; }
+
+  /* Stats bar */
+  .stats-bar { flex-wrap: wrap; gap: 10px; padding: 10px 12px; font-size: 11px; border-radius: 8px; }
+
+  /* Answer card */
+  .answer-card { padding: 12px; border-radius: 10px; }
+  .answer-card-title { font-size: 12px; margin-bottom: 8px; }
+  .answer-grid { grid-template-columns: repeat(auto-fill, minmax(32px, 1fr)); gap: 5px; }
+  .answer-btn { width: 100%; height: 34px; font-size: 12px; aspect-ratio: 1; }
+
+  /* Config grid */
+  .config-grid { grid-template-columns: 1fr; gap: 12px; }
+  .chip-group { gap: 6px; }
+  .chip { padding: 8px 16px; font-size: 13px; }
+
+  /* Forms */
+  .form-row { flex-direction: column; gap: 0; }
+  .form-input, .form-select, .form-textarea { font-size: 15px; padding: 10px 12px; }
+  .form-textarea { min-height: 100px; }
+
+  /* Bank/Student items */
+  .bank-item { flex-wrap: wrap; padding: 12px; gap: 8px; }
+  .bank-item-info { width: 100%; flex: none; }
+  .bank-item-name { font-size: 14px; }
+  .bank-item-meta { font-size: 11px; }
+  .bank-item-actions { width: 100%; justify-content: flex-end; }
+  .bank-item-actions .btn { padding: 6px 10px; font-size: 12px; }
+
+  /* Records */
+  .record-item { padding: 12px; gap: 10px; }
+  .record-icon { width: 32px; height: 32px; font-size: 14px; }
+  .record-title { font-size: 13px; }
+  .record-meta { font-size: 11px; }
+  .record-score { font-size: 18px; }
+
+  /* Exam result */
+  .exam-result { padding: 20px; }
+  .exam-result-score { font-size: 48px; }
+  .exam-result-details { flex-wrap: wrap; gap: 16px; }
+  .exam-result-detail-value { font-size: 18px; }
+
+  /* Modal */
+  .modal-overlay { padding: 0; }
+  .modal { max-width: 100%; width: 100%; min-height: 100vh; border-radius: 0; max-height: 100vh; }
+  .modal-header { padding: 14px 16px; position: sticky; top: 0; background: var(--card); z-index: 10; }
+  .modal-body { padding: 16px; }
+  .modal-footer { padding: 12px 16px; position: sticky; bottom: 0; background: var(--card); }
+  .modal-footer .btn { flex: 1; padding: 10px; }
+
+  /* Toast */
+  #toast-container { top: 10px; right: 10px; left: 10px; }
+  .toast { max-width: 100%; font-size: 13px; padding: 10px 16px; }
+
+  /* Preview table */
+  .preview-table { font-size: 12px; }
+  .preview-table th, .preview-table td { padding: 8px 6px; }
+
+  /* Empty state */
+  .empty-state { padding: 32px 16px; }
+  .empty-state-icon { font-size: 40px; }
+
+  /* Focus mode (quiz full screen) */
+  body.focus-mode .content { padding: 8px; }
+
+  /* Import zone */
+  .import-zone { padding: 24px 12px; }
+  .import-tabs { overflow-x: auto; white-space: nowrap; }
+  .import-tab { padding: 10px 14px; font-size: 13px; }
+}
+
+/* Very small screens */
+@media (max-width: 380px) {
+  .stats-grid { grid-template-columns: 1fr; }
+  .quick-actions { grid-template-columns: 1fr; }
+  .quiz-progress { font-size: 11px; }
+  .option-item { padding: 12px; }
+  .answer-grid { grid-template-columns: repeat(auto-fill, minmax(30px, 1fr)); }
+}

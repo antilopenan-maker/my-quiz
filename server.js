@@ -5,8 +5,8 @@
  */
 const express = require('express');
 const path = require('path');
-const { db, User, StudentCourse, Course, Group, Bank, Question, Record, WrongEntry } = require('./db');
-const { hashPassword, verifyPassword, signToken, requireAuth, requireTeacher, requireStudent } = require('./auth');
+const { db, User, StudentCourse, ApiKey, Course, Group, Bank, Question, Record, WrongEntry } = require('./db');
+const { hashPassword, verifyPassword, signToken, generateApiKey, requireAuth, requireTeacher, requireStudent } = require('./auth');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -333,6 +333,166 @@ app.delete('/api/wrongbook/:questionId', requireAuth, requireStudent, (req, res)
 app.delete('/api/wrongbook/clear-mastered', requireAuth, requireStudent, (req, res) => {
   WrongEntry.clearMastered.run(req.user.id);
   res.json({ ok: true });
+});
+
+// ===== API Key 管理（教师） =====
+
+// 列出 API Keys
+app.get('/api/apikeys', requireAuth, requireTeacher, (req, res) => {
+  res.json({ keys: ApiKey.findByTeacher.all(req.user.id) });
+});
+
+// 生成新 API Key
+app.post('/api/apikeys', requireAuth, requireTeacher, (req, res) => {
+  const { label } = req.body;
+  const keyId = generateApiKey();
+  ApiKey.create.run(keyId, req.user.id, label || '');
+  res.json({ key: keyId, label: label || '' });
+});
+
+// 停用 / 删除 API Key
+app.delete('/api/apikeys/:keyId', requireAuth, requireTeacher, (req, res) => {
+  ApiKey.delete.run(req.params.keyId, req.user.id);
+  res.json({ ok: true });
+});
+
+// ===== LLM 接口（API Key 认证，自动建课程/分组/题库） =====
+
+// LLM：查看系统状态（课程/分组/题库概览）
+app.get('/api/llm/status', requireAuth, requireTeacher, (req, res) => {
+  const courses = Course.findByTeacher.all(req.user.id).map(c => ({
+    id: c.id, name: c.name, description: c.description,
+    group_count: c.group_count, bank_count: c.bank_count, qcount: c.qcount,
+  }));
+  const students = User.findStudents.all(req.user.id);
+  res.json({
+    teacher: req.user.username,
+    courses,
+    student_count: students.length,
+    api_note: '使用 POST /api/llm/import 导入题目，支持自动创建课程/分组/题库',
+  });
+});
+
+// LLM：导入题目（自动创建课程/分组/题库，或追加到已有题库）
+app.post('/api/llm/import', requireAuth, requireTeacher, (req, res) => {
+  const { course, group, bank, questions, description } = req.body;
+
+  // 参数校验
+  if (!course || !bank || !Array.isArray(questions) || questions.length === 0) {
+    return res.status(400).json({
+      error: '参数缺失',
+      required: { course: '课程名', group: '分组名', bank: '题库名', questions: '题目数组' },
+      example: {
+        course: 'PMP',
+        group: '第一章 项目管理概论',
+        bank: '练习题1',
+        questions: [{ type: 'single', question: '题干', options: [{ key: 'A', text: '选项A' }], answerKeys: ['A'], analysis: '解析' }],
+      },
+    });
+  }
+
+  const teacherId = req.user.id;
+  let courseId, groupId, bankId;
+  let courseCreated = false, groupCreated = false, bankCreated = false;
+
+  // 1. 查找或创建课程
+  let courseRow = Course.findByTeacher.all(teacherId).find(c => c.name === course);
+  if (courseRow) {
+    courseId = courseRow.id;
+  } else {
+    const info = Course.create.run(teacherId, course, description || '');
+    courseId = info.lastInsertRowid;
+    courseCreated = true;
+  }
+
+  // 2. 查找或创建分组
+  let groupRow = Group.findByCourse.all(courseId).find(g => g.name === (group || '默认分组'));
+  if (groupRow) {
+    groupId = groupRow.id;
+  } else {
+    const info = Group.create.run(courseId, group || '默认分组', 0);
+    groupId = info.lastInsertRowid;
+    groupCreated = true;
+  }
+
+  // 3. 查找或创建题库
+  let bankRow = Bank.findByGroup.all(groupId).find(b => b.name === bank);
+  if (bankRow) {
+    bankId = bankRow.id;
+  } else {
+    const info = Bank.create.run(groupId, teacherId, bank);
+    bankId = info.lastInsertRowid;
+    bankCreated = true;
+  }
+
+  // 4. 导入题目
+  const startNum = (Question.count.get(bankId)?.count) || 0;
+  const insertMany = db.transaction((qs) => {
+    qs.forEach((q, i) => {
+      Question.insert.run(
+        bankId,
+        q.type || 'single',
+        startNum + i + 1,
+        q.question || '',
+        JSON.stringify(q.options || []),
+        JSON.stringify(q.answerKeys || q.answer_keys || []),
+        JSON.stringify(q.answerText || q.answer_text || []),
+        q.analysis || '',
+        q.topic || '',
+        q.score || 1
+      );
+    });
+  });
+  insertMany(questions);
+
+  const totalQ = Question.count.get(bankId)?.count || 0;
+
+  res.json({
+    ok: true,
+    course: { id: courseId, name: course, created: courseCreated },
+    group: { id: groupId, name: group || '默认分组', created: groupCreated },
+    bank: { id: bankId, name: bank, created: bankCreated },
+    imported: questions.length,
+    total_questions: totalQ,
+  });
+});
+
+// LLM：查看某题库的题目列表
+app.get('/api/llm/banks/:bankId/questions', requireAuth, requireTeacher, (req, res) => {
+  const bank = Bank.findById.get(req.params.bankId);
+  if (!bank || bank.teacher_id !== req.user.id) return res.status(403).json({ error: '无权操作' });
+  const questions = Question.findByBank.all(req.params.bankId).map(q => ({
+    ...q,
+    options: q.options ? JSON.parse(q.options) : [],
+    answer_keys: q.answer_keys ? JSON.parse(q.answer_keys) : [],
+    answer_text: q.answer_text ? JSON.parse(q.answer_text) : [],
+  }));
+  res.json({ bank: { id: bank.id, name: bank.name }, questions });
+});
+
+// LLM：创建学员
+app.post('/api/llm/students', requireAuth, requireTeacher, (req, res) => {
+  const { username, password, displayName } = req.body;
+  if (!username || !password) return res.status(400).json({ error: '用户名和密码不能为空' });
+  const existing = User.findByUsername.get(username);
+  if (existing) return res.status(409).json({ error: '用户名已存在' });
+  const hash = hashPassword(password);
+  const info = User.create.run(username, hash, 'student', req.user.id, displayName || username);
+  res.json({ student: User.findById.get(info.lastInsertRowid) });
+});
+
+// LLM：给学员绑定课程
+app.put('/api/llm/students/:studentId/courses', requireAuth, requireTeacher, (req, res) => {
+  const students = User.findStudents.all(req.user.id);
+  if (!students.find(s => s.id === parseInt(req.params.studentId))) {
+    return res.status(403).json({ error: '无权操作或学员不存在' });
+  }
+  const { courseIds } = req.body;
+  const teacherCourses = Course.findByTeacher.all(req.user.id).map(c => c.id);
+  const validIds = (courseIds || []).filter(id => teacherCourses.includes(id));
+  StudentCourse.clearByStudent.run(req.params.studentId);
+  validIds.forEach(cid => StudentCourse.bind.run(req.params.studentId, cid));
+  res.json({ ok: true, bound_courses: validIds.length });
 });
 
 // ===== Health & Fallback =====

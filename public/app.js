@@ -15,9 +15,9 @@ const TYPE_BADGE = { single: 'badge-single', multi: 'badge-multi', judge: 'badge
 const VIEW_TITLES = {
   dashboard: '首页', courses: '课程管理', import: '导入题库',
   students: '学员管理', practice: '刷题练习', exam: '考试模式',
-  wrongbook: '错题本', records: '练习记录'
+  wrongbook: '错题本', records: '练习记录', settings: '设置'
 };
-const TEACHER_NAV = ['dashboard', 'courses', 'import', 'students', 'records'];
+const TEACHER_NAV = ['dashboard', 'courses', 'import', 'students', 'records', 'settings'];
 const STUDENT_NAV = ['dashboard', 'practice', 'exam', 'wrongbook', 'records'];
 
 // ===== State =====
@@ -73,13 +73,19 @@ function showApp() { $('login-page').style.display = 'none'; $('app').classList.
 function setupNav() {
   const nav = currentUser.role === 'teacher' ? TEACHER_NAV : STUDENT_NAV;
   $('nav-items').innerHTML = nav.map(v => `<button class="nav-item" data-view="${v}"><span class="nav-icon">${getNavIcon(v)}</span> ${VIEW_TITLES[v]}</button>`).join('');
-  $('nav-items').querySelectorAll('.nav-item').forEach(btn => btn.addEventListener('click', () => switchView(btn.dataset.view)));
+  $('nav-items').querySelectorAll('.nav-item').forEach(btn => btn.addEventListener('click', () => {
+    switchView(btn.dataset.view);
+    // Close sidebar on mobile
+    const sb = $('sidebar'); const ov = $('sidebar-overlay');
+    if (sb) sb.classList.remove('open');
+    if (ov) ov.style.display = 'none';
+  }));
   $('user-role-label').textContent = currentUser.role === 'teacher' ? '教师端' : '学员端';
   $('sidebar-user').textContent = (currentUser.displayName || currentUser.username) + (currentUser.role === 'teacher' ? ' (教师)' : ' (学员)');
 }
 
 function getNavIcon(view) {
-  const icons = { dashboard: '\u2630', courses: '\uD83D\uDCDA', import: '\u21A9', students: '\uD83D\uDC65', practice: '\u270E', exam: '\uD83D\uDCDD', wrongbook: '\u274C', records: '\uD83D\uDCCA' };
+  const icons = { dashboard: '\u2630', courses: '\uD83D\uDCDA', import: '\u21A9', students: '\uD83D\uDC65', practice: '\u270E', exam: '\uD83D\uDCDD', wrongbook: '\u274C', records: '\uD83D\uDCCA', settings: '\u2699' };
   return icons[view] || '';
 }
 
@@ -104,6 +110,7 @@ function renderView(view) {
     case 'exam': renderExamConfig(); break;
     case 'wrongbook': renderWrongBook(); break;
     case 'records': renderRecords(); break;
+    case 'settings': currentUser.role === 'teacher' ? renderSettings() : null; break;
   }
 }
 
@@ -902,7 +909,7 @@ async function startPractice() {
     if (order === 'random') shuffle(qs);
     qs = qs.slice(0, countStr === 'all' ? qs.length : Math.min(parseInt(countStr), qs.length));
     if (!qs.length) { toast('没有题目', 'error'); return; }
-    quizSession = { mode: 'practice', bankId: bank.id, bankName: bank.name, questions: qs, currentIndex: 0, answers: {}, revealed: {}, startTime: Date.now() };
+    quizSession = { mode: 'practice', bankId: bank.id, bankName: bank.name, questions: qs, currentIndex: 0, answers: {}, revealed: {}, submitted: new Set(), startTime: Date.now() };
     document.body.classList.add('focus-mode'); switchView('practice'); renderQuiz();
   } catch (e) { toast(e.message, 'error'); }
 }
@@ -928,7 +935,7 @@ async function startExam() {
     const data = await api(`/banks/${bank.id}/questions`);
     let qs = data.questions || []; shuffle(qs); qs = qs.slice(0, Math.min(count, qs.length));
     if (!qs.length) { toast('没有题目', 'error'); return; }
-    quizSession = { mode: 'exam', bankId: bank.id, bankName: bank.name, examName: name, questions: qs, currentIndex: 0, answers: {}, revealed: {}, startTime: Date.now(), timeLimit: timeMin*60, passScore: pass };
+    quizSession = { mode: 'exam', bankId: bank.id, bankName: bank.name, examName: name, questions: qs, currentIndex: 0, answers: {}, revealed: {}, submitted: new Set(), startTime: Date.now(), timeLimit: timeMin*60, passScore: pass };
     if (examTimer) clearInterval(examTimer); examTimer = setInterval(updateExamTimer, 1000);
     document.body.classList.add('focus-mode'); switchView('exam'); renderQuiz();
   } catch (e) { toast(e.message, 'error'); }
@@ -948,32 +955,100 @@ function renderQuiz() {
   if (!quizSession) return;
   const { questions, currentIndex, mode, answers, revealed } = quizSession;
   const q = questions[currentIndex], ans = answers[currentIndex], isRev = revealed[currentIndex];
+  const isSubmitted = quizSession.submitted?.has(currentIndex);
   const el = $('view-' + mode);
-  const tAns = Object.keys(answers).length, tCor = Object.values(answers).filter(a => a.correct).length;
+  // Stats: only count submitted/revealed answers
+  const evaluated = [...(quizSession.submitted || new Set()), ...Object.keys(revealed).map(Number)];
+  const tAns = evaluated.length;
+  const tCor = evaluated.filter(i => answers[i]?.correct).length;
+  const tWrg = tAns - tCor;
+
+  // Option display logic
+  function optionClass(opt) {
+    let cls = 'option-item';
+    if (ans?.keys?.includes(opt.key)) {
+      if (isSubmitted || isRev) {
+        // After submit: show correct/wrong
+        cls += ans.correct ? ' correct' : ' wrong';
+      } else {
+        // Before submit: just selected
+        cls += ' selected';
+      }
+    } else if ((isSubmitted || isRev) && q.answer_keys?.includes(opt.key)) {
+      // Show the correct answer in feedback
+      cls += ' revealed';
+    }
+    return cls;
+  }
+
+  // Feedback only shows after submit or reveal
+  const showFeedback = isSubmitted || isRev;
+
   el.innerHTML = `<div class="quiz-container">
     <div class="quiz-header"><div class="quiz-progress">第 ${currentIndex+1} / ${questions.length} 题</div><div class="flex gap-2">${mode==='exam'?`<div class="quiz-timer" id="exam-timer">--:--</div>`:''}<button class="btn btn-ghost btn-sm" onclick="QM.exitQuiz()">\u2715</button></div></div>
     <div class="question-card"><div class="question-number"><span>${TYPE_LABELS[q.type]||q.type}</span><span class="text-sm text-sec">第 ${q.number||currentIndex+1} 题</span></div><div class="question-text">${esc(q.question)}</div>
-    ${q.type === 'blank' ? `<div class="form-group mt-3"><input class="form-input ${isRev?'wrong':''}" style="font-size:14px;" placeholder="请输入答案" value="${esc(ans?.text||'')}" ${isRev?'readonly':''} oninput="QM.fillBlank(${currentIndex}, this.value)"></div>` : `<div class="options-list">${q.options.map(opt => { let cls = 'option-item'; if (ans) { if (ans.keys?.includes(opt.key)) cls += (isRev||mode==='practice') ? (ans.correct?' correct':' wrong') : ' selected'; else if (isRev && q.answer_keys?.includes(opt.key)) cls += ' revealed'; } return `<div class="${cls}" onclick="QM.selectOption(${currentIndex}, '${opt.key}')"><div class="option-key">${opt.key}</div><div class="option-text">${esc(opt.text)}</div></div>`; }).join('')}</div>`}
-    ${(isRev || (mode === 'practice' && ans)) ? `<div class="feedback show ${ans?.correct?'correct':isRev?'revealed':'wrong'}"><div class="feedback-label">${ans?.correct?'\u2714 回答正确':ans?'\u2718 回答错误':'\u2728 已显示答案'}</div><div>正确答案：${esc(q.answer_keys?.join(', ')||q.answer_text?.join(', '))}</div>${q.analysis?`<div class="feedback-analysis"><strong>解析：</strong>${esc(q.analysis)}</div>`:''}</div>` : ''}
+    ${q.type === 'blank' ? `<div class="form-group mt-3"><input class="form-input ${(isSubmitted||isRev)?(ans?.correct?'':'wrong'):''}" style="font-size:14px;" placeholder="请输入答案" value="${esc(ans?.text||'')}" ${(isSubmitted||isRev)?'readonly':''} oninput="QM.fillBlank(${currentIndex}, this.value)"></div>` : `<div class="options-list">${q.options.map(opt => `<div class="${optionClass(opt)}" onclick="${(isSubmitted||isRev)?'':`QM.selectOption(${currentIndex}, '${opt.key}')`}"><div class="option-key">${opt.key}</div><div class="option-text">${esc(opt.text)}</div></div>`).join('')}</div>`}
+    ${showFeedback ? `<div class="feedback show ${ans?.correct?'correct':isRev?'revealed':'wrong'}"><div class="feedback-label">${ans?.correct?'\u2714 回答正确':isRev?'\u2728 已显示答案':'\u2718 回答错误'}</div><div>正确答案：${esc(q.answer_keys?.join(', ')||q.answer_text?.join(', '))}</div>${q.analysis?`<div class="feedback-analysis"><strong>解析：</strong>${esc(q.analysis)}</div>`:''}</div>` : ''}
     </div>
-    <div class="quiz-controls"><div class="quiz-nav-btns"><button class="btn btn-outline" onclick="QM.prevQ()" ${currentIndex===0?'disabled':''}>上一题</button><button class="btn btn-outline" onclick="QM.nextQ()" ${currentIndex===questions.length-1?'disabled':''}>下一题</button></div><div class="flex gap-2">${mode==='practice'&&!isRev&&!ans?`<button class="btn btn-ghost" onclick="QM.revealAns(${currentIndex})">显示答案</button>`:''}${mode==='practice'&&ans&&!isRev?`<button class="btn btn-outline" onclick="QM.confirmAns()">确认</button>`:''}${mode==='exam'?`<button class="btn btn-primary" onclick="QM.submitExam()">交卷</button>`:''}</div></div>
-    <div class="stats-bar"><div class="stats-bar-item"><div class="stats-bar-dot blue"></div> 已答 ${tAns}</div><div class="stats-bar-item"><div class="stats-bar-dot green"></div> 正确 ${tCor}</div><div class="stats-bar-item"><div class="stats-bar-dot red"></div> 错误 ${tAns-tCor}</div><div class="stats-bar-item"><div class="stats-bar-dot gray"></div> 剩余 ${questions.length-tAns}</div></div>
-    <div class="answer-card"><div class="answer-card-title">答题卡</div><div class="answer-grid">${Array.from({length: questions.length}, (_, i) => { let c = 'answer-btn'; if (i===currentIndex) c+=' current'; else if (answers[i]) c += answers[i].correct ? ' correct-card' : ' wrong-card'; return `<button class="${c}" onclick="QM.goTo(${i})">${i+1}</button>`; }).join('')}</div></div>
+    <div class="quiz-controls"><div class="quiz-nav-btns"><button class="btn btn-outline" onclick="QM.prevQ()" ${currentIndex===0?'disabled':''}>上一题</button><button class="btn btn-outline" onclick="QM.nextQ()" ${currentIndex===questions.length-1?'disabled':''}>下一题</button></div><div class="flex gap-2">
+      ${mode==='practice' && !showFeedback && !ans ? `<button class="btn btn-ghost" onclick="QM.revealAns(${currentIndex})">显示答案</button>` : ''}
+      ${mode==='practice' && !showFeedback && ans ? `<button class="btn btn-primary" onclick="QM.submitAns()">提交答案</button>` : ''}
+      ${mode==='exam' ? `<button class="btn btn-primary" onclick="QM.submitExam()">交卷</button>` : ''}
+    </div></div>
+    <div class="stats-bar"><div class="stats-bar-item"><div class="stats-bar-dot blue"></div> 已答 ${tAns}</div><div class="stats-bar-item"><div class="stats-bar-dot green"></div> 正确 ${tCor}</div><div class="stats-bar-item"><div class="stats-bar-dot red"></div> 错误 ${tWrg}</div><div class="stats-bar-item"><div class="stats-bar-dot gray"></div> 剩余 ${questions.length-tAns}</div></div>
+    <div class="answer-card"><div class="answer-card-title">答题卡</div><div class="answer-grid">${Array.from({length: questions.length}, (_, i) => { let c = 'answer-btn'; const iSub = quizSession.submitted?.has(i); const iRev = revealed[i]; if (i===currentIndex) c+=' current'; else if (iSub||iRev) c += answers[i]?.correct ? ' correct-card' : ' wrong-card'; else if (answers[i]) c += ' answered'; return `<button class="${c}" onclick="QM.goTo(${i})">${i+1}</button>`; }).join('')}</div></div>
   </div>`;
   if (mode === 'exam') updateExamTimer();
 }
 
 function selectOption(idx, key) {
-  if (!quizSession) return; const q = quizSession.questions[idx]; if (!q) return;
-  if (q.type === 'multi') { const ex = quizSession.answers[idx]?.keys || []; const i = ex.indexOf(key); if (i>=0) ex.splice(i,1); else ex.push(key); quizSession.answers[idx] = { keys: [...ex], correct: false }; }
-  else quizSession.answers[idx] = { keys: [key], correct: false };
-  if (quizSession.mode === 'practice') quizSession.answers[idx].correct = checkAns(q, quizSession.answers[idx]);
+  if (!quizSession) return;
+  const q = quizSession.questions[idx]; if (!q) return;
+  // Don't evaluate in practice mode - just track selections
+  if (q.type === 'multi') {
+    const ex = quizSession.answers[idx]?.keys || [];
+    const i = ex.indexOf(key);
+    if (i >= 0) ex.splice(i, 1); else ex.push(key);
+    quizSession.answers[idx] = { keys: [...ex], correct: false };
+  } else {
+    quizSession.answers[idx] = { keys: [key], correct: false };
+  }
   renderQuiz();
 }
 
-function fillBlank(idx, val) { if (!quizSession) return; quizSession.answers[idx] = quizSession.answers[idx] || { keys: [], correct: false }; quizSession.answers[idx].text = val; }
-function confirmAns() { if (!quizSession) return; const idx = quizSession.currentIndex, q = quizSession.questions[idx], a = quizSession.answers[idx]; if (!a) return; a.correct = checkAns(q, a); quizSession.revealed[idx] = true; renderQuiz(); }
-function revealAns(idx) { if (!quizSession) return; quizSession.revealed[idx] = true; renderQuiz(); }
+function fillBlank(idx, val) {
+  if (!quizSession) return;
+  const wasEmpty = !quizSession.answers[idx]?.text;
+  quizSession.answers[idx] = quizSession.answers[idx] || { keys: [], correct: false };
+  quizSession.answers[idx].text = val;
+  // Re-render only when button visibility changes (empty <-> non-empty)
+  const isEmpty = !val.trim();
+  if (wasEmpty !== isEmpty) {
+    renderQuiz();
+    // Restore focus to input after re-render
+    const input = document.querySelector('.question-card input');
+    if (input) { input.focus(); input.setSelectionRange(val.length, val.length); }
+  }
+}
+
+function submitAns() {
+  if (!quizSession) return;
+  const idx = quizSession.currentIndex, q = quizSession.questions[idx], a = quizSession.answers[idx];
+  if (!a) { toast('请先选择答案', 'error'); return; }
+  // Evaluate and show feedback
+  a.correct = checkAns(q, a);
+  quizSession.submitted = quizSession.submitted || new Set();
+  quizSession.submitted.add(idx);
+  renderQuiz();
+}
+
+function revealAns(idx) {
+  if (!quizSession) return;
+  quizSession.revealed[idx] = true;
+  quizSession.submitted = quizSession.submitted || new Set();
+  quizSession.submitted.add(idx);
+  renderQuiz();
+}
 
 function checkAns(q, a) {
   if (!a) return false;
@@ -996,12 +1071,19 @@ function exitQuiz() {
 
 async function savePracticeRecord() {
   if (!quizSession) return;
-  const answers = quizSession.answers, total = quizSession.questions.length;
-  const answered = Object.keys(answers).length, correct = Object.values(answers).filter(a => a.correct).length;
+  const submitted = quizSession.submitted || new Set();
+  const answers = quizSession.answers;
+  const total = submitted.size;
+  let correct = 0;
   const wrongQs = [], correctQs = [];
-  for (const [idx, a] of Object.entries(answers)) { const qid = quizSession.questions[idx].id; if (a.correct) correctQs.push(qid); else wrongQs.push(qid); }
-  const details = Object.entries(answers).map(([idx, a]) => ({ questionId: quizSession.questions[idx].id, userAnswer: a.keys, correct: a.correct }));
-  try { await api('/records', { method: 'POST', body: JSON.stringify({ bankId: quizSession.bankId, mode: '练习', name: '刷题练习', total: answered, correct, score: total > 0 ? Math.round(correct/total*100) : 0, duration: Math.floor((Date.now()-quizSession.startTime)/1000), details, wrongQuestions: wrongQs, correctQuestions: correctQs }) }); } catch {}
+  const details = [];
+  for (const idx of submitted) {
+    const a = answers[idx]; if (!a) continue;
+    const qid = quizSession.questions[idx].id;
+    if (a.correct) { correct++; correctQs.push(qid); } else wrongQs.push(qid);
+    details.push({ questionId: qid, userAnswer: a.keys, correct: a.correct });
+  }
+  try { await api('/records', { method: 'POST', body: JSON.stringify({ bankId: quizSession.bankId, mode: '练习', name: '刷题练习', total, correct, score: total > 0 ? Math.round(correct/total*100) : 0, duration: Math.floor((Date.now()-quizSession.startTime)/1000), details, wrongQuestions: wrongQs, correctQuestions: correctQs }) }); } catch {}
 }
 
 async function submitExam() {
@@ -1042,6 +1124,96 @@ async function renderRecords() {
   } catch (e) { toast(e.message, 'error'); }
 }
 
+// ===== Settings (Teacher) =====
+async function renderSettings() {
+  const el = $('view-settings');
+  const bankCount = banks.length;
+  const totalQ = banks.reduce((s, b) => s + (b.qcount || 0), 0);
+  try {
+    const [coursesRes, stuRes, keyRes] = await Promise.all([api('/courses'), api('/students'), api('/apikeys')]);
+    courses = coursesRes.courses || [];
+    const studentCount = (stuRes.students || []).length;
+    const keys = keyRes.keys || [];
+
+    el.innerHTML = `
+      <div class="quiz-container">
+        <div class="card">
+          <div class="card-header"><span class="card-title">数据统计</span></div>
+          <div class="stats-bar" style="background:transparent;padding:0;">
+            <div class="stats-bar-item">${courses.length} 个课程</div>
+            <div class="stats-bar-item">${bankCount} 个题库</div>
+            <div class="stats-bar-item">${totalQ} 道题目</div>
+            <div class="stats-bar-item">${studentCount} 名学员</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><span class="card-title">API Key 管理</span><button class="btn btn-primary btn-sm" onclick="QM.createApiKey()">+ 生成新 Key</button></div>
+          <p class="text-sm text-sec mb-3">API Key 用于大模型对接，无需登录即可通过接口导入题库、创建学员等。Key 格式以 <code>mq_</code> 开头。</p>
+          ${keys.length === 0 ? '<p class="text-sm text-sec">暂无 API Key，点击上方按钮生成。</p>' : `
+          <table class="preview-table"><thead><tr><th>Key</th><th>标签</th><th>创建时间</th><th>最近使用</th><th>状态</th><th>操作</th></tr></thead><tbody>
+            ${keys.map(k => `<tr>
+              <td class="text-sm" style="font-family:monospace;max-width:200px;" title="${esc(k.key_id)}">${esc(k.key_id.slice(0,20))}...</td>
+              <td class="text-sm">${esc(k.label || '-')}</td>
+              <td class="text-sm">${formatDate(k.created_at)}</td>
+              <td class="text-sm">${formatDate(k.last_used_at)}</td>
+              <td>${k.is_active ? '<span class="badge badge-ok">活跃</span>' : '<span class="badge badge-err">停用</span>'}</td>
+              <td><button class="btn btn-ghost btn-sm" onclick="QM.copyApiKey('${esc(k.key_id)}')" title="复制">复制</button> <button class="btn btn-ghost btn-sm" onclick="QM.deleteApiKey('${esc(k.key_id)}')" title="删除" style="color:var(--danger);">删除</button></td>
+            </tr>`).join('')}
+          </tbody></table>`}
+        </div>
+
+        <div class="card">
+          <div class="card-header"><span class="card-title">LLM 接口说明</span></div>
+          <p class="text-sm text-sec mb-2">大模型可通过以下接口操作 MyQuiz 系统（使用 API Key 认证）：</p>
+          <table class="preview-table"><thead><tr><th>方法</th><th>路径</th><th>功能</th></tr></thead><tbody>
+            <tr><td><span class="badge badge-single">GET</span></td><td class="text-sm" style="font-family:monospace;">/api/llm/status</td><td class="text-sm">查看课程/题库概览</td></tr>
+            <tr><td><span class="badge badge-ok">POST</span></td><td class="text-sm" style="font-family:monospace;">/api/llm/import</td><td class="text-sm">导入题目（自动建课程/分组/题库）</td></tr>
+            <tr><td><span class="badge badge-single">GET</span></td><td class="text-sm" style="font-family:monospace;">/api/llm/banks/:id/questions</td><td class="text-sm">查看题库题目</td></tr>
+            <tr><td><span class="badge badge-ok">POST</span></td><td class="text-sm" style="font-family:monospace;">/api/llm/students</td><td class="text-sm">创建学员</td></tr>
+            <tr><td><span class="badge badge-ok">PUT</span></td><td class="text-sm" style="font-family:monospace;">/api/llm/students/:id/courses</td><td class="text-sm">绑定学员课程</td></tr>
+          </tbody></table>
+          <p class="text-sm text-sec mt-2">认证方式：请求头 <code>Authorization: Bearer mq_xxxxx</code></p>
+        </div>
+      </div>
+    `;
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+function createApiKey() {
+  showModal('生成 API Key', `<div class="form-group"><label class="form-label">标签（可选）</label><input class="form-input" id="apikey-label" placeholder="如：LLM导入专用"></div>`, `<button class="btn btn-outline" onclick="QM.closeModal()">取消</button><button class="btn btn-primary" onclick="QM.doCreateApiKey()">生成</button>`);
+}
+
+async function doCreateApiKey() {
+  const label = $('apikey-label').value.trim();
+  try {
+    const data = await api('/apikeys', { method: 'POST', body: JSON.stringify({ label }) });
+    closeModal();
+    showModal('API Key 已生成', `
+      <p class="text-sm text-sec mb-2">请妥善保存以下 Key，它不会再次显示：</p>
+      <div style="background:var(--bg);padding:12px;border-radius:8px;font-family:monospace;font-size:12px;word-break:break-all;">${esc(data.key)}</div>
+      <p class="text-sm text-sec mt-2">使用方式：在请求头中携带 <code>Authorization: Bearer ${esc(data.key)}</code></p>
+    `, `<button class="btn btn-primary" onclick="QM.copyApiKey('${esc(data.key)}')">复制 Key</button><button class="btn btn-outline" onclick="QM.closeModal()">关闭</button>`);
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+function copyApiKey(key) {
+  navigator.clipboard.writeText(key).then(() => toast('已复制到剪贴板', 'success')).catch(() => {
+    const ta = document.createElement('textarea'); ta.value = key; document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); toast('已复制', 'success'); } catch { toast('复制失败', 'error'); }
+    document.body.removeChild(ta);
+  });
+}
+
+async function deleteApiKey(key) {
+  showModal('确认删除', '<p>删除后使用该 Key 的所有接口将无法访问，确定删除？</p>', `<button class="btn btn-outline" onclick="QM.closeModal()">取消</button><button class="btn btn-danger" onclick="QM.doDeleteApiKey('${esc(key)}')">删除</button>`);
+}
+
+async function doDeleteApiKey(key) {
+  try { await api(`/apikeys/${key}`, { method: 'DELETE' }); closeModal(); toast('API Key 已删除', 'success'); renderSettings(); }
+  catch (e) { toast(e.message, 'error'); }
+}
+
 // ===== Init =====
 function init() {
   document.querySelectorAll('.login-tab').forEach(t => {
@@ -1066,8 +1238,9 @@ return {
   viewBankQuestions, addQuestion, editQuestion, doSaveQuestion, deleteQuestion, doDeleteQuestion,
   copyTemplate, fillTemplate, parseTextImport, parseJSONImport, importToBank, doImportToBank,
   createStudent, doCreateStudent, deleteStudent, doDeleteStudent, viewStudentRecords, manageStudentCourses, doManageStudentCourses,
-  startPractice, startExam, selectOption, fillBlank, confirmAns, revealAns,
-  prevQ, nextQ, goTo, exitQuiz, submitExam, clearMastered
+  startPractice, startExam, selectOption, fillBlank, submitAns, revealAns,
+  prevQ, nextQ, goTo, exitQuiz, submitExam, clearMastered,
+  createApiKey, doCreateApiKey, copyApiKey, deleteApiKey, doDeleteApiKey
 };
 
 })();

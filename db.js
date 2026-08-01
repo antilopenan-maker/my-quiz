@@ -111,6 +111,16 @@ CREATE TABLE IF NOT EXISTS student_courses (
   FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE,
   FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE
 );
+
+CREATE TABLE IF NOT EXISTS api_keys (
+  key_id TEXT PRIMARY KEY,
+  teacher_id INTEGER NOT NULL,
+  label TEXT DEFAULT '',
+  created_at TEXT DEFAULT (datetime('now', 'localtime')),
+  last_used_at TEXT,
+  is_active INTEGER DEFAULT 1,
+  FOREIGN KEY (teacher_id) REFERENCES users(id) ON DELETE CASCADE
+);
 `;
 
 db.exec(SCHEMA);
@@ -136,6 +146,16 @@ const StudentCourse = {
   findCourseIds: db.prepare(`SELECT course_id FROM student_courses WHERE student_id = ?`),
   isBound: db.prepare(`SELECT COUNT(*) as count FROM student_courses WHERE student_id = ? AND course_id = ?`),
   clearByStudent: db.prepare(`DELETE FROM student_courses WHERE student_id = ?`),
+};
+
+// API Key
+const ApiKey = {
+  create: db.prepare(`INSERT INTO api_keys (key_id, teacher_id, label) VALUES (?, ?, ?)`),
+  findByKey: db.prepare(`SELECT ak.*, u.username, u.role FROM api_keys ak JOIN users u ON ak.teacher_id = u.id WHERE ak.key_id = ? AND ak.is_active = 1`),
+  findByTeacher: db.prepare(`SELECT key_id, label, created_at, last_used_at, is_active FROM api_keys WHERE teacher_id = ? ORDER BY created_at DESC`),
+  updateLastUsed: db.prepare(`UPDATE api_keys SET last_used_at = datetime('now', 'localtime') WHERE key_id = ?`),
+  deactivate: db.prepare(`UPDATE api_keys SET is_active = 0 WHERE key_id = ? AND teacher_id = ?`),
+  delete: db.prepare(`DELETE FROM api_keys WHERE key_id = ? AND teacher_id = ?`),
 };
 
 // 课程
@@ -264,4 +284,4 @@ const WrongEntry = {
   clearMastered: db.prepare(`DELETE FROM wrong_entries WHERE user_id = ? AND status = '已掌握'`),
 };
 
-module.exports = { db, User, StudentCourse, Course, Group, Bank, Question, Record, WrongEntry };
+module.exports = { db, User, StudentCourse, ApiKey, Course, Group, Bank, Question, Record, WrongEntry };
