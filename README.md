@@ -39,6 +39,100 @@
 - 判断题 (judge)
 - 填空题 (blank)
 
+## 大模型 API 集成
+
+MyQuiz 支持通过大模型 API 自动生成和添加题目，提升题库建设效率。
+
+### 支持的大模型服务
+- OpenAI API (GPT-3.5/GPT-4)
+- Anthropic Claude
+- 通义千问 (Qwen)
+- 文心一言 (ERNIE Bot)
+- 其他兼容 OpenAI API 格式的模型服务
+
+### 配置大模型 API
+
+在 `.env` 文件中配置以下环境变量：
+
+| 变量 | 说明 | 示例 |
+|------|------|------|
+| `LLM_PROVIDER` | 大模型服务商 | `openai`, `anthropic`, `qwen`, `ernie` |
+| `LLM_API_KEY` | API 密钥 | `sk-xxx` |
+| `LLM_BASE_URL` | API 基础 URL（可选） | `https://api.openai.com/v1` |
+| `LLM_MODEL` | 模型名称 | `gpt-3.5-turbo`, `claude-2`, `qwen-max` |
+| `LLM_TEMPERATURE` | 温度参数（0.0-1.0） | `0.3` |
+| `LLM_MAX_TOKENS` | 最大生成 token 数 | `1024` |
+
+### 使用大模型 API 添加题目
+
+#### 方法一：通过 API 接口添加
+
+教师端可通过以下 API 接口使用大模型生成题目：
+
+```bash
+# 生成单题
+POST /api/banks/:id/questions/generate
+{
+  "topic": "JavaScript 基础",
+  "difficulty": "medium",
+  "type": "single",
+  "count": 5,
+  "instructions": "生成5道关于JavaScript基础语法的单选题，难度中等"
+}
+
+# 批量生成题目
+POST /api/banks/:id/import/generate
+{
+  "topic": "React Hooks",
+  "difficulty": "hard",
+  "type": "multi",
+  "count": 10,
+  "instructions": "生成10道关于React Hooks高级用法的多选题，难度高"
+}
+```
+
+#### 方法二：通过教师界面添加
+
+1. 登录教师后台
+2. 进入目标题库
+3. 点击「AI生成题目」按钮
+4. 输入题目主题、难度、类型和数量
+5. 点击「生成」按钮
+6. 审核生成的题目并确认添加
+
+#### 方法三：通过命令行工具添加
+
+```bash
+# 生成并添加题目到指定题库
+cd D:\Applications\Projects\MyQuiz
+node scripts/generate-questions.js \
+  --bank-id 123 \
+  --topic "Python 数据结构" \
+  --difficulty easy \
+  --type single \
+  --count 10 \
+  --instructions "生成10道关于Python列表、字典、元组的基础单选题"
+```
+
+### 大模型题目生成示例
+
+```json
+{
+  "question": "下列哪个选项不是 Python 的内置数据类型？",
+  "options": ["list", "dict", "array", "tuple"],
+  "answer": ["array"],
+  "explanation": "Python 的内置数据类型包括 list、dict、tuple、set 等，但 array 不是内置类型，需要 import array 或 numpy 才能使用。",
+  "difficulty": "easy"
+}
+```
+
+### 安全与质量控制
+
+- 所有大模型生成的题目都会经过本地规则验证
+- 支持人工审核模式，生成后需教师确认才能入库
+- 提供题目质量评分，帮助教师筛选高质量题目
+- 支持对生成题目进行编辑和修改
+
 ## 快速开始
 
 ### 安装依赖
@@ -107,6 +201,8 @@ my-quiz/
 - `GET /api/banks/:id/questions` - 题目列表
 - `POST /api/banks/:id/import` - 批量导入题目
 - `POST /api/banks/:id/questions` - 添加单题
+- `POST /api/banks/:id/questions/generate` - AI 生成单题
+- `POST /api/banks/:id/import/generate` - AI 批量生成题目
 
 ### 学员管理
 - `GET /api/students` - 学员列表
@@ -128,6 +224,12 @@ my-quiz/
 |------|------|--------|
 | `PORT` | 服务端口 | `3000` |
 | `JWT_SECRET` | JWT 密钥 | `quizmaster-secret-2026-change-in-prod` |
+| `LLM_PROVIDER` | 大模型服务商 | `openai` |
+| `LLM_API_KEY` | API 密钥 | `none` |
+| `LLM_BASE_URL` | API 基础 URL | `https://api.openai.com/v1` |
+| `LLM_MODEL` | 模型名称 | `gpt-3.5-turbo` |
+| `LLM_TEMPERATURE` | 温度参数 | `0.3` |
+| `LLM_MAX_TOKENS` | 最大生成 token 数 | `1024` |
 
 ## 开源协议
 
